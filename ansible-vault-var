@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-echo $1
-echo $2
-
 echo "Commmand: ansible -i \"localhost,\" all  -m debug  -a 'msg=\"{{ $1 }}\"'  --ask-vault-password -e@$2"
 
 ansible -i "localhost," all  -m debug  -a 'msg="{{ '$1' }}"'  --ask-vault-password -e@$2
