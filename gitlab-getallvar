@@ -1,0 +1,67 @@
+#!/bin/bash
+
+VERBOSE=0
+
+while getopts ":v" opt; do
+  case ${opt} in
+    v )
+      VERBOSE=1
+      ;;
+    \? )
+      echo "Usage: $0 [-v] PROJECT_ID"
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND -1))
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 [-v] PROJECT_ID"
+  exit 1
+fi
+
+PROJECT_ID="$1"
+
+if [ -z "$GITLAB_TOKEN" ]; then
+  echo "Error: GITLAB_TOKEN environment variable is not set."
+  exit 1
+fi
+
+if [ -z "$GITLAB_URL" ]; then
+  echo "Error: GITLAB_URL environment variable is not set."
+  exit 1
+fi
+
+# Fetch Project Details to get the Group ID
+PROJECT_DETAILS_URL="${GITLAB_URL}/api/v4/projects/${PROJECT_ID}"
+PROJECT_DETAILS_RESPONSE=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" $PROJECT_DETAILS_URL)
+GROUP_ID=$(echo "$PROJECT_DETAILS_RESPONSE" | jq -r '.namespace.id')
+
+# Fetch Project Variables
+PROJECT_API_URL="${GITLAB_URL}/api/v4/projects/${PROJECT_ID}/variables"
+PROJECT_RESPONSE=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" $PROJECT_API_URL)
+
+# Fetch Group Variables
+GROUP_API_URL="${GITLAB_URL}/api/v4/groups/${GROUP_ID}/variables"
+GROUP_RESPONSE=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" $GROUP_API_URL)
+
+# Check if verbose output is requested
+if [ $VERBOSE -eq 1 ]; then
+  echo "Response from Project API:"
+  echo "$PROJECT_RESPONSE"
+  echo
+  echo "Response from Group API:"
+  echo "$GROUP_RESPONSE"
+  echo
+fi
+
+# Process and display the Project Variables
+echo "Project Variables:"
+echo "$PROJECT_RESPONSE" | jq -r '.[] | "\(.key)=\(.value)"'
+echo
+
+# Process and display the Group Variables
+echo "Group Variables:"
+echo "$GROUP_RESPONSE" | jq -r '.[] | "\(.key)=\(.value)"'
+
